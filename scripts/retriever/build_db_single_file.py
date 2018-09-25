@@ -90,6 +90,7 @@ def store_contents(data_path, save_path, preprocess, num_workers=None):
 
     # workers = ProcessPool(num_workers, initializer=init, initargs=(preprocess,))
     documents = get_contents(data_path)
+    logger.info("finished reading the single file")
     total = len(documents)
     assert total == 32812353
 
