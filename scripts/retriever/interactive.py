@@ -22,30 +22,70 @@ logger.addHandler(console)
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, default=None)
 parser.add_argument('--data_json', type=str, default=None)
+parser.add_argument('--filter', action='store_false',
+                    help="we filter out selected documents that directly contain the answer")
 args = parser.parse_args()
 
 logger.info('Initializing ranker...')
 ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
 
 import json
+
 id_to_text = {}
 with open(args.data_json, 'r') as f:
     for line in f:
         dict = json.loads(line.strip())
         id_to_text[dict['id']] = dict['text']
 
+
 # ------------------------------------------------------------------------------
 # Drop in to interactive
 # ------------------------------------------------------------------------------
 
+def jaccard(a, b):
+    return len(set(a.split()).intersection(b.split())) / float(len(set(a.split()).union(b.split())))
+
 
 def process(query, k=1):
+    # s1, s2 both passed in seperately, we concatenate them to query
     doc_names, doc_scores = ranker.closest_docs(query, k)
     table = prettytable.PrettyTable(
         ['Rank', 'Doc Id', 'Doc Score', 'Text']
     )
     for i in range(len(doc_names)):
-        table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
+
+        if args.filter:
+            # 1. see if the answer is just completely in the text (we imagine passing in s1, s2 seperately)
+            if query in id_to_text[doc_names[i]]:
+                continue
+            elif jaccard(query, id_to_text[doc_names[i]]) > 0.9:
+                continue
+            else:
+                table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
+        else:
+            table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
+    print(table)
+
+
+def search(s1, s2, k=1):
+    # s1, s2 both passed in seperately, we concatenate them to query
+    doc_names, doc_scores = ranker.closest_docs(s1.strip() + ' ' + s2, k)
+    table = prettytable.PrettyTable(
+        ['Rank', 'Doc Id', 'Doc Score', 'Text']
+    )
+    for i in range(len(doc_names)):
+
+        if args.filter:
+            # 1. see if the answer is just completely in the text (we imagine passing in s1, s2 seperately)
+            if s1 in id_to_text[doc_names[i]] or s2 in id_to_text[doc_names[i]]:
+                continue
+            # 2. check if jaccard similarity is high
+            elif jaccard(s1.strip() + ' ' + s2, id_to_text[doc_names[i]]) > 0.9:
+                continue
+            else:
+                table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
+        else:
+            table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
     print(table)
 
 
