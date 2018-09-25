@@ -95,7 +95,7 @@ def store_contents(data_path, save_path, preprocess, num_workers=None):
     assert total == 32812353
 
     count = 0
-    with tqdm(total=total) as pbar:
+    with tqdm(total=len(range(0, total, 500))) as pbar:
         for i in tqdm(range(0, total, 500)):
             count += 500
             c.executemany("INSERT INTO documents VALUES (?,?)", documents[i:i + 500])
