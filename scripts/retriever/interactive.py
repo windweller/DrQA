@@ -21,11 +21,18 @@ logger.addHandler(console)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, default=None)
+parser.add_argument('--data_json', type=str, default=None)
 args = parser.parse_args()
 
 logger.info('Initializing ranker...')
 ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
 
+import json
+id_to_text = {}
+with open(args.data_json, 'r') as f:
+    for line in f:
+        dict = json.loads(line.strip())
+        id_to_text[dict['id']] = dict['text']
 
 # ------------------------------------------------------------------------------
 # Drop in to interactive
@@ -35,10 +42,10 @@ ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
 def process(query, k=1):
     doc_names, doc_scores = ranker.closest_docs(query, k)
     table = prettytable.PrettyTable(
-        ['Rank', 'Doc Id', 'Doc Score']
+        ['Rank', 'Doc Id', 'Doc Score', 'Text']
     )
     for i in range(len(doc_names)):
-        table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i]])
+        table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
     print(table)
 
 
