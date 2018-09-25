@@ -30,10 +30,11 @@ logger.info('Initializing ranker...')
 ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
 
 import json
+from tqdm import tqdm
 
 id_to_text = {}
 with open(args.data_json, 'r') as f:
-    for line in f:
+    for line in tqdm(f):
         dict = json.loads(line.strip())
         id_to_text[dict['id']] = dict['text']
 
