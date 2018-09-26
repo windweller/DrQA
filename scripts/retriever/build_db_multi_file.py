@@ -32,12 +32,6 @@ logger.addHandler(console)
 PREPROCESS_FN = None
 
 
-def init(filename):
-    global PREPROCESS_FN
-    if filename:
-        PREPROCESS_FN = import_module(filename).preprocess
-
-
 def import_module(filename):
     """Import a module given a full path to the file."""
     spec = importlib.util.spec_from_file_location('doc_filter', filename)
@@ -99,7 +93,7 @@ def store_contents(data_path, save_path, num_workers=None):
     list_files = [file_name for file_name in os.listdir(data_path) if args.prefix in file_name]
     logger.info("processing through {}".format(list_files))
 
-    workers = ProcessPool(num_workers, initializer=init)
+    workers = ProcessPool(num_workers)
 
     workers.imap_unordered(get_contents, list_files)
 
@@ -114,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('data_path', type=str, help='/path/to/data')
     parser.add_argument('save_path', type=str, help='/path/to/saved/')
     parser.add_argument('prefix', type=str, default="because_db_split", help='because_db_split')
-    parser.add_argument('num_shards', type=int, default=20, help='because_db_split')
+    parser.add_argument('num_shards', type=int, default=20, help='number of shards')
     parser.add_argument('--num-workers', type=int, default=20,
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
