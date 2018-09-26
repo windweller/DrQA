@@ -95,7 +95,7 @@ def store_contents(data_path, save_path, num_workers=None):
 
     workers = ProcessPool(num_workers)
 
-    workers.imap_unordered(get_contents, list_files)
+    workers.imap_unordered(save_to_database, list_files)
 
 
 # ------------------------------------------------------------------------------
