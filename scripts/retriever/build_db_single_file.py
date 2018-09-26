@@ -92,7 +92,6 @@ def store_contents(data_path, save_path, preprocess, num_workers=None):
     documents = get_contents(data_path)
     logger.info("finished reading the single file")
     total = len(documents)
-    assert total == 32812353
 
     count = 0
     with tqdm(total=len(range(0, total, 500))) as pbar:
