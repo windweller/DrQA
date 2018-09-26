@@ -94,6 +94,8 @@ def store_contents(data_path, save_path, num_workers=None):
     list_files = [file_name for file_name in os.listdir(data_path) if args.prefix in file_name]
     logger.info("processing through {}".format(list_files))
 
+    num_workers = len(list_files)
+
     workers = ProcessPool(num_workers)
 
     # launching multiple evaluations asynchronously *may* use more processes
