@@ -98,7 +98,7 @@ def store_contents(data_path, save_path, num_workers=None):
 
     # launching multiple evaluations asynchronously *may* use more processes
     multiple_results = [workers.apply_async(save_to_database, file_name) for file_name in list_files]
-    print [res.get() for res in multiple_results]
+    print([res.get() for res in multiple_results])
 
     # workers.map_async(save_to_database, list_files)
 
