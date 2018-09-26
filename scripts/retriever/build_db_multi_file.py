@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-No multiprocessing here
-we commit to SQL by batches
+This handles a list of files
 """
 
 import argparse
@@ -11,6 +10,9 @@ import json
 import os
 import logging
 import importlib.util
+
+from os.path import join as pjoin
+from multiprocessing import Pool as ProcessPool
 
 from tqdm import tqdm
 from drqa.retriever import utils
@@ -43,6 +45,7 @@ def import_module(filename):
     spec.loader.exec_module(module)
     return module
 
+
 # ------------------------------------------------------------------------------
 # Store corpus.
 # ------------------------------------------------------------------------------
@@ -66,30 +69,14 @@ def get_contents(filename):
             documents.append((doc['id'], doc['text']))
     return documents
 
-
-# we remove the multiprocessing capability of this function
-def store_contents(data_path, save_path):
-    """Preprocess and store a corpus of documents in sqlite.
-
-    Args:
-        data_path: Root path to directory (or directory of directories) of files
-          containing json encoded documents (must have `id` and `text` fields).
-        save_path: Path to output sqlite db.
-        preprocess: Path to file defining a custom `preprocess` function. Takes
-          in and outputs a structured doc.
-        num_workers: Number of parallel processes to use when reading docs.
-    """
-    if os.path.isfile(save_path):
-        logger.info('%s already exists! Overwriting.' % save_path)
-        os.remove(save_path)
-
+def save_to_database(file_name):
     logger.info('Reading into database...')
-    conn = sqlite3.connect(save_path)
+    conn = sqlite3.connect(pjoin(args.save_path, file_name.split('.txt')[0] + '.db'))
     c = conn.cursor()
     c.execute("CREATE TABLE documents (id PRIMARY KEY, text);")
 
     # workers = ProcessPool(num_workers, initializer=init, initargs=(preprocess,))
-    documents = get_contents(data_path)
+    documents = get_contents(file_name)
     logger.info("finished reading the single file")
     total = len(documents)
 
@@ -104,6 +91,19 @@ def store_contents(data_path, save_path):
     conn.commit()
     conn.close()
 
+# we remove the multiprocessing capability of this function
+def store_contents(data_path, save_path, num_workers=None):
+    """
+    We actually create number of db files the same as the shards
+    """
+    list_files = [file_name for file_name in os.listdir(data_path) if args.prefix in file_name]
+    logger.info("processing through {}".format(list_files))
+
+    workers = ProcessPool(num_workers, initializer=init)
+
+    workers.imap_unordered(get_contents, list_files)
+
+
 # ------------------------------------------------------------------------------
 # Main.
 # ------------------------------------------------------------------------------
@@ -112,9 +112,13 @@ def store_contents(data_path, save_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', type=str, help='/path/to/data')
-    parser.add_argument('save_path', type=str, help='/path/to/saved/db.db')
+    parser.add_argument('save_path', type=str, help='/path/to/saved/')
+    parser.add_argument('prefix', type=str, default="because_db_split", help='because_db_split')
+    parser.add_argument('num_shards', type=int, default=20, help='because_db_split')
+    parser.add_argument('--num-workers', type=int, default=20,
+                        help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
 
     store_contents(
-        args.data_path, args.save_path
+        args.data_path, args.save_path, args.num_workers
     )
