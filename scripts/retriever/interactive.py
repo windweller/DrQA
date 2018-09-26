@@ -47,6 +47,19 @@ def jaccard(a, b):
     return len(set(a.split()).intersection(b.split())) / float(len(set(a.split()).union(b.split())))
 
 
+def inclusion_match(query, reference, silent=True):
+    reference_set = set(reference.split())
+    query_set = set(query.split())
+    if not silent:
+        print(len(query_set - reference_set) / float(len(query_set)))
+
+    # this number should be small is most words are matched, this means 65% of words matched
+    if len(query_set - reference_set) / float(len(query_set)) < 0.35:
+        # True meaning query and reference match, and we should reject
+        return True
+    else:
+        return False
+
 def process(query, k=1):
     # s1, s2 both passed in seperately, we concatenate them to query
     doc_names, doc_scores = ranker.closest_docs(query, k)
@@ -59,7 +72,7 @@ def process(query, k=1):
             # 1. see if the answer is just completely in the text (we imagine passing in s1, s2 seperately)
             if query in id_to_text[doc_names[i]]:
                 continue
-            elif jaccard(query, id_to_text[doc_names[i]]) > 0.9:
+            elif inclusion_match(query, id_to_text[doc_names[i]]):
                 continue
             else:
                 table.add_row([i + 1, doc_names[i], '%.5g' % doc_scores[i], id_to_text[doc_names[i]]])
