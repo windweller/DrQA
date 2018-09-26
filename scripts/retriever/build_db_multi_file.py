@@ -71,7 +71,7 @@ def save_to_database(file_name):
     c.execute("CREATE TABLE documents (id PRIMARY KEY, text);")
 
     # workers = ProcessPool(num_workers, initializer=init, initargs=(preprocess,))
-    documents = get_contents(file_name)
+    documents = get_contents(pjoin(args.data_path, file_name))
     logger.info("finished reading the single file")
     total = len(documents)
 
