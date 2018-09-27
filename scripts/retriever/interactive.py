@@ -6,6 +6,8 @@
 # LICENSE file in the root directory of this source tree.
 """Interactive mode for the tfidf DrQA retriever module."""
 
+import os
+from os.path import join as pjoin
 import argparse
 import code
 import prettytable
@@ -20,14 +22,21 @@ console.setFormatter(fmt)
 logger.addHandler(console)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', type=str, default=None)
-parser.add_argument('--data_json', type=str, default=None)
+parser.add_argument('--model', type=str, default=None, help="single file or a directory")
+parser.add_argument('--data_json', type=str, default=None, help="this should be .txt file, each line is a json")
 parser.add_argument('--filter', action='store_false',
                     help="we filter out selected documents that directly contain the answer")
 args = parser.parse_args()
 
 logger.info('Initializing ranker...')
-ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
+
+multi_db = False
+if os.path.isfile(args.model):
+    ranker = retriever.get_class('tfidf')(tfidf_path=args.model)
+else:
+    list_ranker = [retriever.get_class('tfidf')(tfidf_path=pjoin(args.model, file_name)) for file_name in
+                   os.listdir(args.model) if '.npz' in file_name]
+    multi_db = True
 
 import json
 from tqdm import tqdm
@@ -60,9 +69,21 @@ def inclusion_match(query, reference, silent=True):
     else:
         return False
 
+
 def process(query, k=1):
     # s1, s2 both passed in seperately, we concatenate them to query
-    doc_names, doc_scores = ranker.closest_docs(query, k)
+    if not multi_db:
+        doc_names, doc_scores = ranker.closest_docs(query, k)
+    else:
+        # we loop through all datasets
+        doc_names_scores = []
+        for rank in list_ranker:
+            doc_names, doc_scores = rank.closest_docs(query, k)
+            doc_names_scores.extend(zip(doc_names, doc_scores))
+
+        global_ranked = sorted(doc_names_scores, key=lambda tup: tup[1])
+        doc_names, doc_scores = zip(*global_ranked[:k])
+
     table = prettytable.PrettyTable(
         ['Rank', 'Doc Id', 'Doc Score', 'Text']
     )
